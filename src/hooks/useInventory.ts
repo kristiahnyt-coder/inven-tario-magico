@@ -19,7 +19,15 @@ export const useInventory = () => {
     if (savedData) {
       try {
         const parsed = JSON.parse(savedData);
-        setState(parsed);
+        // Migrate old data to include new properties
+        setState({
+          articles: parsed.articles || [],
+          sections: parsed.sections || [],
+          recentActivities: parsed.recentActivities || [],
+          invoices: parsed.invoices || [],
+          quotes: parsed.quotes || [],
+          customers: parsed.customers || [],
+        });
       } catch (error) {
         console.error('Error loading inventory data:', error);
       }
