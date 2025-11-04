@@ -6,6 +6,8 @@ import JefeModule from "@/components/modules/JefeModule";
 import InventarioModule from "@/components/modules/InventarioModule";
 import SeccionesModule from "@/components/modules/SeccionesModule";
 import RecientesModule from "@/components/modules/RecientesModule";
+import FacturacionModule from "@/components/modules/FacturacionModule";
+import CotizacionModule from "@/components/modules/CotizacionModule";
 
 interface UserSession {
   username: string;
@@ -59,6 +61,10 @@ const Index = () => {
         return <SeccionesModule />;
       case 'recientes':
         return <RecientesModule />;
+      case 'facturacion':
+        return <FacturacionModule />;
+      case 'cotizacion':
+        return <CotizacionModule />;
       default:
         return <EmpleadoModule />;
     }

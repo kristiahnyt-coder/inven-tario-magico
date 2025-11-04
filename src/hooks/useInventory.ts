@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Article, Section, RecentActivity, InventoryState } from '@/types/inventory';
+import { Article, Section, RecentActivity, InventoryState, Invoice, Quote, Customer, InvoiceItem } from '@/types/inventory';
 
 const STORAGE_KEY = 'inventory_data';
 
@@ -8,6 +8,9 @@ export const useInventory = () => {
     articles: [],
     sections: [],
     recentActivities: [],
+    invoices: [],
+    quotes: [],
+    customers: [],
   });
 
   // Load data from localStorage on mount
@@ -213,6 +216,136 @@ export const useInventory = () => {
     });
   };
 
+  // Customer management
+  const addCustomer = (customerData: Omit<Customer, 'id'>) => {
+    const newCustomer: Customer = {
+      ...customerData,
+      id: Date.now().toString(),
+    };
+
+    setState(prev => ({
+      ...prev,
+      customers: [...prev.customers, newCustomer],
+    }));
+
+    return newCustomer;
+  };
+
+  // Invoice management
+  const createInvoice = (customer: Customer, items: InvoiceItem[]) => {
+    const subtotal = items.reduce((sum, item) => sum + item.total, 0);
+    const iva = subtotal * 0.19; // 19% IVA Colombia
+    const total = subtotal + iva;
+
+    const invoiceNumber = `FAC-${String(state.invoices.length + 1).padStart(6, '0')}`;
+
+    const newInvoice: Invoice = {
+      id: Date.now().toString(),
+      invoiceNumber,
+      customer,
+      items,
+      subtotal,
+      iva,
+      total,
+      status: 'draft',
+      createdAt: new Date().toISOString(),
+      resolucionDian: 'Resolución DIAN 18764001234567',
+    };
+
+    setState(prev => ({
+      ...prev,
+      invoices: [...prev.invoices, newInvoice],
+    }));
+
+    return newInvoice;
+  };
+
+  const confirmInvoice = (invoiceId: string) => {
+    setState(prev => ({
+      ...prev,
+      invoices: prev.invoices.map(invoice => {
+        if (invoice.id === invoiceId && invoice.status === 'draft') {
+          // Deduct items from inventory
+          invoice.items.forEach(item => {
+            const article = prev.articles.find(a => a.id === item.articleId);
+            if (article) {
+              updateArticle(article.id, {
+                units: Math.max(0, article.units - item.quantity),
+              });
+            }
+          });
+
+          return {
+            ...invoice,
+            status: 'confirmed' as const,
+            confirmedAt: new Date().toISOString(),
+          };
+        }
+        return invoice;
+      }),
+    }));
+  };
+
+  const cancelInvoice = (invoiceId: string) => {
+    setState(prev => ({
+      ...prev,
+      invoices: prev.invoices.map(invoice =>
+        invoice.id === invoiceId
+          ? { ...invoice, status: 'cancelled' as const }
+          : invoice
+      ),
+    }));
+  };
+
+  // Quote management
+  const createQuote = (customer: Customer, items: InvoiceItem[], validDays: number = 15) => {
+    const subtotal = items.reduce((sum, item) => sum + item.total, 0);
+    const iva = subtotal * 0.19;
+    const total = subtotal + iva;
+
+    const quoteNumber = `COT-${String(state.quotes.length + 1).padStart(6, '0')}`;
+    const validUntil = new Date();
+    validUntil.setDate(validUntil.getDate() + validDays);
+
+    const newQuote: Quote = {
+      id: Date.now().toString(),
+      quoteNumber,
+      customer,
+      items,
+      subtotal,
+      iva,
+      total,
+      status: 'active',
+      validUntil: validUntil.toISOString(),
+      createdAt: new Date().toISOString(),
+    };
+
+    setState(prev => ({
+      ...prev,
+      quotes: [...prev.quotes, newQuote],
+    }));
+
+    return newQuote;
+  };
+
+  const convertQuoteToInvoice = (quoteId: string) => {
+    const quote = state.quotes.find(q => q.id === quoteId);
+    if (!quote || quote.status !== 'active') return null;
+
+    const newInvoice = createInvoice(quote.customer, quote.items);
+
+    setState(prev => ({
+      ...prev,
+      quotes: prev.quotes.map(q =>
+        q.id === quoteId
+          ? { ...q, status: 'converted' as const, convertedToInvoiceId: newInvoice.id }
+          : q
+      ),
+    }));
+
+    return newInvoice;
+  };
+
   return {
     ...state,
     addArticle,
@@ -223,5 +356,11 @@ export const useInventory = () => {
     deleteSection,
     bulkAddArticles,
     searchArticles,
+    addCustomer,
+    createInvoice,
+    confirmInvoice,
+    cancelInvoice,
+    createQuote,
+    convertQuoteToInvoice,
   };
 };

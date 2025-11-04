@@ -10,7 +10,9 @@ import {
   Clock, 
   LogOut,
   Menu,
-  X
+  X,
+  FileText,
+  Receipt
 } from "lucide-react";
 
 interface SidebarProps {
@@ -58,6 +60,20 @@ const Sidebar = ({ currentModule, onModuleChange, onLogout, userRole, username }
       label: 'Recientes',
       icon: Clock,
       description: 'Actividad reciente',
+      available: true,
+    },
+    {
+      id: 'facturacion',
+      label: 'Facturación',
+      icon: FileText,
+      description: 'Generar facturas',
+      available: userRole === 'jefe',
+    },
+    {
+      id: 'cotizacion',
+      label: 'Cotizaciones',
+      icon: Receipt,
+      description: 'Crear cotizaciones',
       available: true,
     },
   ];
